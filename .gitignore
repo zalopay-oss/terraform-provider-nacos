@@ -1,2 +1,11 @@
 # Jetbrains workspace config
-.idea
+.idea/
+
+bin/
+
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
