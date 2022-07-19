@@ -1,4 +1,4 @@
-module gitlab.zalopay.vn/top/cicd/terraform-provider-nacos
+module github.com/zalopay-oss/terraform-provider-nacos
 
 go 1.16
 

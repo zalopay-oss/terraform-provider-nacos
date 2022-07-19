@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
-	nacos "gitlab.zalopay.vn/top/cicd/terraform-provider-nacos/pkg/client"
+	nacos "github.com/zalopay-oss/terraform-provider-nacos/pkg/client"
 )
 
 var providerFactories = map[string]func() (*schema.Provider, error){

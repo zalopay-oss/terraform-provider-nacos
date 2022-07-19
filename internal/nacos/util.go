@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	nacos "gitlab.zalopay.vn/top/cicd/terraform-provider-nacos/pkg/client"
+	nacos "github.com/zalopay-oss/terraform-provider-nacos/pkg/client"
 )
 
 const (

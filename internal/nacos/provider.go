@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	nacos "gitlab.zalopay.vn/top/cicd/terraform-provider-nacos/pkg/client"
+	nacos "github.com/zalopay-oss/terraform-provider-nacos/pkg/client"
 )
 
 func Provider() *schema.Provider {

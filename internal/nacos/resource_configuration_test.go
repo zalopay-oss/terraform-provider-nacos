@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 
-	nacos "gitlab.zalopay.vn/top/cicd/terraform-provider-nacos/pkg/client"
+	nacos "github.com/zalopay-oss/terraform-provider-nacos/pkg/client"
 )
 
 const (
