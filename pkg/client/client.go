@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-
-	builder "github.com/phuc1998/http-builder"
 )
 
 type Config struct {
@@ -18,7 +16,7 @@ type Config struct {
 
 type Client struct {
 	user        *loginParams
-	httpClient  *builder.APIClient
+	baseURL     string
 	accessToken string
 }
 
@@ -35,18 +33,13 @@ func NewClient(cfg *Config) (*Client, error) {
 	if cfg.ContextPath != "" {
 		contextPath = cfg.ContextPath
 	}
-	httpBuilderCfg := builder.NewConfiguration().
-		AddBasePath(fmt.Sprintf("%s/%s/v1/", cfg.Address, contextPath)).
-		AddHTTPClient(&http.Client{})
-	httpBuilderClient := builder.NewAPIClient(httpBuilderCfg)
-	loginParams := &loginParams{
-		Username: cfg.Username,
-		Password: cfg.Password,
-	}
 
 	client := &Client{
-		user:       loginParams,
-		httpClient: httpBuilderClient,
+		user: &loginParams{
+			Username: cfg.Username,
+			Password: cfg.Password,
+		},
+		baseURL: fmt.Sprintf("%s/%s/v1/", cfg.Address, contextPath),
 	}
 
 	if err := client.login(); err != nil {
@@ -59,12 +52,11 @@ func NewClient(cfg *Config) (*Client, error) {
 
 func (c *Client) login() error {
 	var resp loginResponse
-
-	_, err := c.httpClient.Builder(LoginPath).
-		Post().
-		BuildRequest(c.user).
-		UseMultipartFormData().
-		Call(context.Background(), &resp)
+	err := request(
+		context.Background(), http.MethodPost, c.baseURL+LoginPath, &resp,
+		withForm(
+			"username", c.user.Username,
+			"password", c.user.Password))
 	if err != nil {
 		return err
 	}
@@ -73,40 +65,38 @@ func (c *Client) login() error {
 	return nil
 }
 
-func (c *Client) getAuthParams() *authParams {
-	return &authParams{
-		AccessToken: c.accessToken,
-	}
-}
-
 func (c *Client) GetConfiguration(ctx context.Context, params *ConfigurationId) (*Configuration, error) {
-	resp := &Configuration{}
-	_, err := c.httpClient.Builder(ConfigurationPath).
-		Get().
-		BuildQuery(c.getAuthParams()).
-		BuildQuery(optionalParams{Show: ShowAll}).
-		BuildRequest(params).
-		Call(ctx, resp)
-
+	var resp Configuration
+	err := request(
+		ctx, http.MethodGet, c.baseURL+ConfigurationPath, &resp,
+		withAuthentication(c.accessToken),
+		withQuery(
+			"tenant", params.Namespace,
+			"group", params.Group,
+			"dataId", params.Key,
+			"show", ShowAll))
 	if err != nil {
 		return nil, fmt.Errorf("get configuration error: %v", err)
 	}
-	if *resp == (Configuration{}) {
-		log.Printf("[WARN] not found configration=%+v", params)
+	if resp == (Configuration{}) {
+		log.Printf("[WARN] not found configration=%+v\n", params)
 		return nil, fmt.Errorf("not found configuration=%+v", *params)
 	}
 
-	return resp, nil
+	return &resp, nil
 }
 
 func (c *Client) PublishConfiguration(ctx context.Context, params *Configuration) error {
 	var resp bool
-	_, err := c.httpClient.Builder(ConfigurationPath).
-		Post().
-		BuildQuery(c.getAuthParams()).
-		BuildRequest(params).
-		Call(ctx, &resp)
-
+	err := request(
+		ctx, http.MethodPost, c.baseURL+ConfigurationPath, &resp,
+		withAuthentication(c.accessToken),
+		withForm(
+			"tenant", params.Namespace,
+			"group", params.Group,
+			"dataId", params.Key,
+			"content", params.Value,
+			"desc", params.Description))
 	if err != nil {
 		return fmt.Errorf("publish configuration error: %+v", err)
 	}
@@ -116,12 +106,13 @@ func (c *Client) PublishConfiguration(ctx context.Context, params *Configuration
 
 func (c *Client) DeleteConfiguration(ctx context.Context, params *ConfigurationId) (bool, error) {
 	var resp bool
-	_, err := c.httpClient.Builder(ConfigurationPath).
-		Delete().
-		BuildQuery(c.getAuthParams()).
-		BuildRequest(params).
-		Call(ctx, resp)
-
+	err := request(
+		ctx, http.MethodDelete, c.baseURL+ConfigurationPath, &resp,
+		withAuthentication(c.accessToken),
+		withQuery(
+			"tenant", params.Namespace,
+			"group", params.Group,
+			"dataId", params.Key))
 	if err != nil {
 		return false, fmt.Errorf("delete configuration error: %v", err)
 	}

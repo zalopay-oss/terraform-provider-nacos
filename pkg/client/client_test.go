@@ -133,6 +133,7 @@ func TestClient_GetConfiguration(t *testing.T) {
 						assert.Equal(t, configurationId.Namespace, r.URL.Query().Get("tenant"))
 						assert.Equal(t, configurationId.Group, r.URL.Query().Get("group"))
 						assert.Equal(t, configurationId.Key, r.URL.Query().Get("dataId"))
+						assert.Equal(t, "all", r.URL.Query().Get("show"))
 
 						tt.getConfigHandler(w, r)
 					}
@@ -261,10 +262,9 @@ func TestClient_PublishConfiguration(t *testing.T) {
 
 				case _ConfigurationPath:
 					if r.Method == "POST" {
-						assert.Equal(t, configuration.Namespace, r.URL.Query().Get("tenant"))
-						assert.Equal(t, configuration.Group, r.URL.Query().Get("group"))
-						assert.Equal(t, configuration.Key, r.URL.Query().Get("dataId"))
-
+						assert.Equal(t, configuration.Namespace, r.FormValue("tenant"))
+						assert.Equal(t, configuration.Group, r.FormValue("group"))
+						assert.Equal(t, configuration.Key, r.FormValue("dataId"))
 						assert.Equal(t, configuration.Value, r.FormValue("content"))
 						assert.Equal(t, configuration.Description, r.FormValue("desc"))
 
