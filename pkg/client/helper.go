@@ -95,7 +95,7 @@ func sendRequest(req *http.Request, result interface{}) error {
 	var err error
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to do req = %v: %v", req, err)
+		return fmt.Errorf("failed to do req = %v: %v", *req, err)
 	}
 	defer resp.Body.Close()
 
@@ -108,7 +108,7 @@ func sendRequest(req *http.Request, result interface{}) error {
 		return nil
 	}
 	if err = json.Unmarshal(body, result); err != nil {
-		return fmt.Errorf("failed to unmarshal response body = %v: %v", string(body), err)
+		return fmt.Errorf("failed to unmarshal response body = %s: %v", string(body), err)
 	}
 	return nil
 }

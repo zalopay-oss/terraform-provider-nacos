@@ -51,9 +51,9 @@ func NewClient(cfg *Config) (*Client, error) {
 }
 
 func (c *Client) login() error {
-	resp := &loginResponse{}
+	var resp loginResponse
 	err := request(
-		context.Background(), http.MethodPost, c.baseURL+LoginPath, resp,
+		context.Background(), http.MethodPost, c.baseURL+LoginPath, &resp,
 		withForm(
 			"username", c.user.Username,
 			"password", c.user.Password))
@@ -66,7 +66,7 @@ func (c *Client) login() error {
 }
 
 func (c *Client) GetConfiguration(ctx context.Context, params *ConfigurationId) (*Configuration, error) {
-	resp := Configuration{}
+	var resp Configuration
 	err := request(
 		ctx, http.MethodGet, c.baseURL+ConfigurationPath, &resp,
 		withAuthentication(c.accessToken),
@@ -79,7 +79,7 @@ func (c *Client) GetConfiguration(ctx context.Context, params *ConfigurationId) 
 		return nil, fmt.Errorf("get configuration error: %v", err)
 	}
 	if resp == (Configuration{}) {
-		log.Printf("[WARN] not found configration=%+v", params)
+		log.Printf("[WARN] not found configration=%+v\n", params)
 		return nil, fmt.Errorf("not found configuration=%+v", *params)
 	}
 
