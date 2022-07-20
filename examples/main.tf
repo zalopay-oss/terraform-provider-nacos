@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     nacos = {
-      version = "0.1.0"
+      version = "0.1.1"
       source = "zalopay-oss/nacos"
     }
   }

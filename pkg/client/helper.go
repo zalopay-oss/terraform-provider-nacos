@@ -104,6 +104,12 @@ func sendRequest(req *http.Request, result interface{}) error {
 		return fmt.Errorf("failed to read response body: %v", err)
 	}
 
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf(
+			"request error status_code = %v, body = %v",
+			resp.StatusCode, string(body))
+	}
+
 	if len(body) == 0 {
 		return nil
 	}
