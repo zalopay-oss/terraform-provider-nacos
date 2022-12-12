@@ -3,8 +3,9 @@ The Terraform Nacos Provider is a plugin for Terraform that allows for the full 
 
 Currently, we only support configuration management on Nacos.
 
-However, our goal is to support other Nacos resources as well such as Namepsace, Service Discovery...
-Link to public provider https://registry.terraform.io/providers/zalopay-oss/nacos/0.1.1
+However, our goal is to support other Nacos resources as well such as Namepsace, Service Discovery...  
+
+Public provider link https://registry.terraform.io/providers/zalopay-oss/nacos/0.1.1
 
 # How to use
 Please check  Document in `/docs`
