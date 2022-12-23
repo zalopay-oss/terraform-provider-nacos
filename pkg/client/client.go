@@ -17,7 +17,7 @@ type Config struct {
 type Client struct {
 	user        *loginParams
 	baseURL     string
-	accessToken string
+	accessToken *cString
 }
 
 const (
@@ -39,7 +39,8 @@ func NewClient(cfg *Config) (*Client, error) {
 			Username: cfg.Username,
 			Password: cfg.Password,
 		},
-		baseURL: fmt.Sprintf("%s/%s/v1/", cfg.Address, contextPath),
+		baseURL:     fmt.Sprintf("%s/%s/v1/", cfg.Address, contextPath),
+		accessToken: &cString{},
 	}
 
 	if err := client.login(); err != nil {
@@ -52,7 +53,7 @@ func NewClient(cfg *Config) (*Client, error) {
 
 func (c *Client) login() error {
 	var resp loginResponse
-	err := request(
+	err := c.request(
 		context.Background(), http.MethodPost, c.baseURL+LoginPath, &resp,
 		withForm(
 			"username", c.user.Username,
@@ -61,13 +62,39 @@ func (c *Client) login() error {
 		return err
 	}
 
-	c.accessToken = resp.AccessToken
+	c.accessToken.set(resp.AccessToken)
 	return nil
+}
+
+func (c *Client) request(ctx context.Context, method, url string, result interface{}, opts ...requestOptionFn) error {
+	_request := func() error {
+		req, err := newRequest(ctx, method, url, opts...)
+		if err != nil {
+			return fmt.Errorf("failed to create new request: %v", err)
+		}
+
+		err = sendRequest(req, result)
+		if err != nil {
+			return fmt.Errorf("failed to send request = %v: %v", *req, err)
+		}
+
+		return err
+	}
+
+	err := _request()
+	if isTokenExpiredError(err) {
+		if loginErr := c.login(); loginErr != nil {
+			return fmt.Errorf("token expired %s, re-login attempt failed: err = %w ", err, loginErr)
+		}
+		err = _request()
+	}
+
+	return err
 }
 
 func (c *Client) GetConfiguration(ctx context.Context, params *ConfigurationId) (*Configuration, error) {
 	var resp Configuration
-	err := request(
+	err := c.request(
 		ctx, http.MethodGet, c.baseURL+ConfigurationPath, &resp,
 		withAuthentication(c.accessToken),
 		withQuery(
@@ -88,7 +115,7 @@ func (c *Client) GetConfiguration(ctx context.Context, params *ConfigurationId) 
 
 func (c *Client) PublishConfiguration(ctx context.Context, params *Configuration) error {
 	var resp bool
-	err := request(
+	err := c.request(
 		ctx, http.MethodPost, c.baseURL+ConfigurationPath, &resp,
 		withAuthentication(c.accessToken),
 		withForm(
@@ -106,7 +133,7 @@ func (c *Client) PublishConfiguration(ctx context.Context, params *Configuration
 
 func (c *Client) DeleteConfiguration(ctx context.Context, params *ConfigurationId) (bool, error) {
 	var resp bool
-	err := request(
+	err := c.request(
 		ctx, http.MethodDelete, c.baseURL+ConfigurationPath, &resp,
 		withAuthentication(c.accessToken),
 		withQuery(

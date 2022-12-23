@@ -27,6 +27,22 @@ func defaultLoginHandler(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write(jsonResp)
 }
 
+func injectResponseToHandler(statusCode int, resp interface{}, handler http.HandlerFunc) http.HandlerFunc {
+	injectResponse := true
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !injectResponse {
+			handler(w, r)
+			return
+		}
+
+		jsonResp, _ := json.Marshal(resp)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		_, _ = w.Write(jsonResp)
+		injectResponse = false
+	}
+}
+
 func TestNewClient(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -70,7 +86,7 @@ func TestNewClient(t *testing.T) {
 			})
 			if tt.expectErr == nil {
 				assert.Nil(t, err)
-				assert.Equal(t, _AccessToken, client.accessToken)
+				assert.Equal(t, _AccessToken, client.accessToken.value())
 			} else {
 				assert.NotNil(t, err)
 			}
@@ -112,6 +128,44 @@ func TestClient_GetConfiguration(t *testing.T) {
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = w.Write(jsonResp)
 			},
+			expectErr: nil,
+		},
+		{
+			name: "failed and no retry",
+			getConfigHandler: injectResponseToHandler(
+				500, map[string]interface{}{
+					"status":  "500",
+					"error":   "Internal",
+					"message": "server internal error!",
+				}, func(w http.ResponseWriter, _ *http.Request) {
+					jsonResp, _ := json.Marshal(map[string]interface{}{
+						"tenant":  "namespace",
+						"group":   "GROUP",
+						"dataId":  "key",
+						"content": "value",
+					})
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write(jsonResp)
+				}),
+			expectErr: nil,
+		},
+		{
+			name: "success after re-login",
+			getConfigHandler: injectResponseToHandler(
+				403, map[string]interface{}{
+					"status":  "403",
+					"error":   "Forbidden",
+					"message": "token expired!",
+				}, func(w http.ResponseWriter, _ *http.Request) {
+					jsonResp, _ := json.Marshal(map[string]interface{}{
+						"tenant":  "namespace",
+						"group":   "GROUP",
+						"dataId":  "key",
+						"content": "value",
+					})
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write(jsonResp)
+				}),
 			expectErr: nil,
 		},
 	}

@@ -7,7 +7,9 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
+	"sync"
 )
 
 type requestOption struct {
@@ -43,8 +45,14 @@ func withQuery(kv ...string) requestOptionFn {
 	}
 }
 
-func withAuthentication(token string) requestOptionFn {
-	return withQuery(accessTokenQueryName, token)
+func withAuthentication(token *cString) requestOptionFn {
+	return func(rOpts *requestOption) error {
+		if rOpts.query == nil {
+			rOpts.query = &url.Values{}
+		}
+
+		return updateValues("query string", rOpts.query, accessTokenQueryName, token.value())
+	}
 }
 
 func withForm(kv ...string) requestOptionFn {
@@ -91,6 +99,19 @@ func newRequest(ctx context.Context, method, url string, opts ...requestOptionFn
 	return req, nil
 }
 
+func isTokenExpiredError(err error) bool {
+	if err == nil {
+		return false
+	}
+	re := regexp.MustCompile(`request error status_code = (\d*), body = (.*)`)
+	matches := re.FindAllStringSubmatch(err.Error(), -1)
+	if matches == nil || len(matches[0]) != 3 {
+		return false
+	}
+	statusCode, body := matches[0][1], matches[0][2]
+	return statusCode == "403" && strings.Contains(body, `"message":"token expired!"`)
+}
+
 func sendRequest(req *http.Request, result interface{}) error {
 	var err error
 	resp, err := http.DefaultClient.Do(req)
@@ -119,18 +140,20 @@ func sendRequest(req *http.Request, result interface{}) error {
 	return nil
 }
 
-func request(ctx context.Context, method, url string, result interface{}, opts ...requestOptionFn) error {
-	var err error
+// cString is a concurrent safe string
+type cString struct {
+	mux sync.RWMutex
+	v   string
+}
 
-	req, err := newRequest(ctx, method, url, opts...)
-	if err != nil {
-		return fmt.Errorf("failed to create new request: %v", err)
-	}
+func (ts *cString) value() string {
+	ts.mux.RLock()
+	defer ts.mux.RUnlock()
+	return ts.v
+}
 
-	err = sendRequest(req, result)
-	if err != nil {
-		return fmt.Errorf("failed to send request = %v: %v", *req, err)
-	}
-
-	return nil
+func (ts *cString) set(s string) {
+	ts.mux.Lock()
+	defer ts.mux.Unlock()
+	ts.v = s
 }
