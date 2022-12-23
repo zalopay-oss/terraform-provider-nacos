@@ -3,9 +3,10 @@ package client
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewRequest(t *testing.T) {
@@ -29,7 +30,8 @@ func TestNewRequest(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := request(
+			cli := new(Client)
+			err := cli.request(
 				context.Background(), "GET", "/test", nil,
 				withForm(tc.form...), withQuery(tc.query...))
 			assert.True(t, strings.Contains(err.Error(), tc.err.Error()))
